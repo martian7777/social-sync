@@ -1,20 +1,19 @@
 import Composer from '@/components/Composer';
 import Link from 'next/link';
-import { auth, signIn, signOut } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { currentUser } from '@clerk/nextjs/server';
+import { SignInButton, UserButton } from '@clerk/nextjs';
 import styles from './page.module.css';
 
 export default async function HomePage() {
-  const session = await auth();
+  const user = await currentUser();
   
   let connectedPlatforms: string[] = [];
-  if (session?.user?.id) {
-    const accs = await prisma.account.findMany({
-      where: { userId: session.user.id },
-      select: { provider: true }
-    });
-    connectedPlatforms = accs.map(a => a.provider.toLowerCase());
+  if (user) {
+    connectedPlatforms = user.externalAccounts.map(a => 
+      a.provider.replace('oauth_', '').toLowerCase()
+    );
   }
+  
   return (
     <main className={styles.main}>
       {/* Nav */}
@@ -31,20 +30,16 @@ export default async function HomePage() {
         </div>
         
         <div className={styles.navRight}>
-          {session ? (
+          {user ? (
             <>
               <span style={{color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginRight: "1rem"}}>
-                {session.user?.email}
+                {user.primaryEmailAddress?.emailAddress}
               </span>
               <Link href="/connections" className={styles.navLink}>Connections</Link>
-              <form action={async () => { "use server"; await signOut(); }}>
-                <button type="submit" className={styles.navButton}>Sign Out</button>
-              </form>
+              <UserButton />
             </>
           ) : (
-            <form action={async () => { "use server"; await signIn(); }}>
-              <button type="submit" className={styles.navButton}>Sign In</button>
-            </form>
+            <SignInButton mode="modal"><button className={styles.navButton}>Sign In</button></SignInButton>
           )}
         </div>
       </nav>
@@ -66,7 +61,7 @@ export default async function HomePage() {
 
       {/* Composer */}
       <section className={styles.composerSection} aria-label="Content composer">
-        <Composer connectedPlatforms={connectedPlatforms} isLoggedIn={!!session} />
+        <Composer connectedPlatforms={connectedPlatforms} isLoggedIn={!!user} />
       </section>
 
       {/* Footer */}

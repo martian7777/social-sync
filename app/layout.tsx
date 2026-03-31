@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,23 +12,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        {children}
-        <Toaster
-          position="bottom-right"
-          theme="dark"
-          richColors
-          toastOptions={{
-            style: {
-              background: 'rgba(17, 17, 30, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              fontFamily: 'Inter, sans-serif',
-            },
-          }}
-        />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body>
+          {children}
+          <Toaster
+            position="bottom-right"
+            theme="dark"
+            richColors
+            toastOptions={{
+              style: {
+                background: 'rgba(17, 17, 30, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                fontFamily: 'Inter, sans-serif',
+              },
+            }}
+          />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

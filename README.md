@@ -18,8 +18,8 @@ Rename or copy your `.env.local` snippet to the root. You must populate the `DAT
 # .env.local
 DATABASE_URL="postgresql://postgres.[YOUR_PROJECT_ID]:[YOUR_PASSWORD]..."
 DIRECT_URL="postgresql://postgres.[YOUR_PROJECT_ID]:[YOUR_PASSWORD]..."
-AUTH_SECRET="your_secret_here" # generate via npx auth secret
-AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
 ```
 
 ### 2. Initialize Database Schema
@@ -42,9 +42,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Authentication & OAuth Connections
 
-This project uses **Auth.js** (NextAuth v5 beta) to allow users to sign in. Users can then independently connect their social accounts (X, Reddit, etc.) to the application.
+This project uses **Clerk** to handle user authentication and social connections.
 
-1. **Sign In**: Currently configured for `Google`, `Email (Magic Link)`, and `Twitter` for the primary sign in. You must configure their relative `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and `EMAIL_SERVER` in `.env.local`.
-2. **Connect**: Head over to the **Connections** page to authorize the app to post on your behalf to the various platforms.
+1. **Sign In**: Configurable in your Clerk Dashboard. Provide the respective `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` in `.env.local`.
+2. **Connect Platforms**: Head over to the **Connections** page and use your Clerk User Profile to authorize the app to post on your behalf by connecting external OAuth accounts (e.g. Twitter, Facebook, TikTok).
 
-> Note: To fully test posting simultaneously, you must acquire the real Client IDs and Secrets from each platform's developer portal and place them in `.env.local` as `AUTH_TWITTER_ID`, `AUTH_FACEBOOK_ID`, etc.
+> Note: To test posting simultaneously, you must acquire the real Client IDs and Secrets from each platform's developer portal and configure them as **Social Connections** within your Clerk Dashboard.

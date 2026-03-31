@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { PlatformId } from '@/lib/types';
-import { auth } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 
 // Simulate realistic API delay
 function sleep(ms: number): Promise<void> {
@@ -51,8 +50,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     return Response.json({ success: false, message: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
@@ -66,11 +65,20 @@ export async function POST(
     );
   }
 
-  const account = await prisma.account.findFirst({
-    where: { userId: session.user.id, provider: platform }
-  });
+  const provider = `oauth_${platform}` as any;
+  
+  let accountToken: string | null = null;
+  try {
+    const client = await clerkClient();
+    const tokenResponse = await client.users.getUserOauthAccessToken(userId, provider);
+    if (tokenResponse.data && tokenResponse.data.length > 0) {
+      accountToken = tokenResponse.data[0].token;
+    }
+  } catch (error) {
+    console.error(`Failed to fetch OAuth token for ${platform}:`, error);
+  }
 
-  if (!account || !account.access_token) {
+  if (!accountToken) {
     return Response.json(
       { success: false, message: `${platform} is not connected. Please connect it in Connections settings.` },
       { status: 400 }
@@ -91,19 +99,19 @@ export async function POST(
 
     switch (platform as PlatformId) {
       case 'twitter':
-        ({ postId } = await callTwitterAPI(content, hasMedia, account.access_token));
+        ({ postId } = await callTwitterAPI(content, hasMedia, accountToken));
         break;
       case 'facebook':
-        ({ postId } = await callFacebookAPI(content, account.access_token));
+        ({ postId } = await callFacebookAPI(content, accountToken));
         break;
       case 'instagram':
-        ({ postId } = await callInstagramAPI(content, hasMedia, account.access_token));
+        ({ postId } = await callInstagramAPI(content, hasMedia, accountToken));
         break;
       case 'tiktok':
-        ({ postId } = await callTikTokAPI(content, account.access_token));
+        ({ postId } = await callTikTokAPI(content, accountToken));
         break;
       case 'reddit':
-        ({ postId } = await callRedditAPI(content, subreddit || '', account.access_token));
+        ({ postId } = await callRedditAPI(content, subreddit || '', accountToken));
         break;
       default:
         throw new Error(`Unhandled platform: ${platform}`);
