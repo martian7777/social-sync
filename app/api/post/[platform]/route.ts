@@ -65,7 +65,16 @@ export async function POST(
     );
   }
 
-  const provider = `oauth_${platform}` as any;
+  // Map our platform IDs to Clerk's OAuth provider names
+  const PLATFORM_TO_CLERK: Record<string, string> = {
+    twitter: 'oauth_x',
+    facebook: 'oauth_facebook',
+    instagram: 'oauth_instagram',
+    tiktok: 'oauth_tiktok',
+    reddit: 'oauth_reddit',
+  };
+
+  const provider = (PLATFORM_TO_CLERK[platform] || `oauth_${platform}`) as any;
   
   let accountToken: string | null = null;
   try {

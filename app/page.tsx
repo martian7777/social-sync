@@ -7,11 +7,25 @@ import styles from './page.module.css';
 export default async function HomePage() {
   const user = await currentUser();
   
+  // Map Clerk provider names to our platform IDs
+  const CLERK_TO_PLATFORM: Record<string, string> = {
+    x: 'twitter',
+    twitter: 'twitter',
+    facebook: 'facebook',
+    instagram: 'instagram',
+    tiktok: 'tiktok',
+    reddit: 'reddit',
+    google: 'google',
+  };
+
   let connectedPlatforms: string[] = [];
   if (user) {
-    connectedPlatforms = user.externalAccounts.map(a => 
-      a.provider.replace('oauth_', '').toLowerCase()
-    );
+    connectedPlatforms = user.externalAccounts
+      .filter(a => a.verification?.status === 'verified')
+      .map(a => {
+        const raw = a.provider.replace('oauth_', '').toLowerCase();
+        return CLERK_TO_PLATFORM[raw] || raw;
+      });
   }
   
   return (
