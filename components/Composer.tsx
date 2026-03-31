@@ -10,7 +10,12 @@ import PlatformPreview from './PlatformPreview';
 import MediaUploader from './MediaUploader';
 import styles from './Composer.module.css';
 
-export default function Composer() {
+interface ComposerProps {
+  connectedPlatforms?: string[];
+  isLoggedIn?: boolean;
+}
+
+export default function Composer({ connectedPlatforms = [], isLoggedIn = false }: ComposerProps) {
   const [content, setContent] = useState('');
   const [media, setMedia] = useState<MediaFile[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<PlatformId>>(new Set());
@@ -157,6 +162,7 @@ export default function Composer() {
             onToggle={togglePlatform}
             postStatuses={postStatuses}
             validationErrors={errors}
+            connectedPlatforms={connectedPlatforms}
           />
         </section>
 

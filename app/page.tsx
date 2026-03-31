@@ -1,7 +1,20 @@
 import Composer from '@/components/Composer';
+import Link from 'next/link';
+import { auth, signIn, signOut } from '@/auth';
+import { prisma } from '@/lib/prisma';
 import styles from './page.module.css';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await auth();
+  
+  let connectedPlatforms: string[] = [];
+  if (session?.user?.id) {
+    const accs = await prisma.account.findMany({
+      where: { userId: session.user.id },
+      select: { provider: true }
+    });
+    connectedPlatforms = accs.map(a => a.provider.toLowerCase());
+  }
   return (
     <main className={styles.main}>
       {/* Nav */}
@@ -14,9 +27,26 @@ export default function HomePage() {
               <circle cx="5" cy="19" r="1"/>
             </svg>
           </div>
-          <span>SocialSync</span>
+          <div className={styles.navBadge}>Beta</div>
         </div>
-        <div className={styles.navBadge}>Beta</div>
+        
+        <div className={styles.navRight}>
+          {session ? (
+            <>
+              <span style={{color: "rgba(255,255,255,0.5)", fontSize: "0.85rem", marginRight: "1rem"}}>
+                {session.user?.email}
+              </span>
+              <Link href="/connections" className={styles.navLink}>Connections</Link>
+              <form action={async () => { "use server"; await signOut(); }}>
+                <button type="submit" className={styles.navButton}>Sign Out</button>
+              </form>
+            </>
+          ) : (
+            <form action={async () => { "use server"; await signIn(); }}>
+              <button type="submit" className={styles.navButton}>Sign In</button>
+            </form>
+          )}
+        </div>
       </nav>
 
       {/* Hero */}
@@ -36,7 +66,7 @@ export default function HomePage() {
 
       {/* Composer */}
       <section className={styles.composerSection} aria-label="Content composer">
-        <Composer />
+        <Composer connectedPlatforms={connectedPlatforms} isLoggedIn={!!session} />
       </section>
 
       {/* Footer */}

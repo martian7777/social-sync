@@ -19,6 +19,7 @@ interface PlatformSelectorProps {
   onToggle: (id: PlatformId) => void;
   postStatuses: Partial<Record<PlatformId, PostStatus>>;
   validationErrors: Partial<Record<PlatformId, string>>;
+  connectedPlatforms?: string[];
 }
 
 export default function PlatformSelector({
@@ -26,6 +27,7 @@ export default function PlatformSelector({
   onToggle,
   postStatuses,
   validationErrors,
+  connectedPlatforms = [],
 }: PlatformSelectorProps) {
   return (
     <div className={styles.grid} role="group" aria-label="Select platforms to post to">
@@ -35,17 +37,18 @@ export default function PlatformSelector({
         const status = postStatuses[platform.id];
         const error = validationErrors[platform.id];
         const constraint = getPlatformConstraintMessage(platform.id);
+        const isConnected = connectedPlatforms.includes(platform.id);
 
         return (
           <button
             key={platform.id}
             id={`platform-btn-${platform.id}`}
-            className={`${styles.platformCard} ${isSelected ? styles.selected : ''} ${error ? styles.hasError : ''}`}
+            className={`${styles.platformCard} ${isSelected ? styles.selected : ''} ${error ? styles.hasError : ''} ${!isConnected ? styles.disconnected : ''}`}
             style={isSelected ? { '--platform-color': platform.color, '--platform-gradient': platform.gradient } as React.CSSProperties : {}}
-            onClick={() => onToggle(platform.id)}
+            onClick={() => isConnected && onToggle(platform.id)}
             aria-pressed={isSelected}
             aria-label={`${isSelected ? 'Deselect' : 'Select'} ${platform.name}`}
-            disabled={status === 'loading'}
+            disabled={status === 'loading' || !isConnected}
           >
             <div className={styles.cardTop}>
               <div
@@ -64,6 +67,7 @@ export default function PlatformSelector({
             <span className={styles.platformName}>{platform.name}</span>
             {constraint && <span className={styles.constraint}>{constraint}</span>}
             {error && <span className={styles.errorText}>{error}</span>}
+            {!isConnected && <span className={styles.unconnectedText}>Connect to use</span>}
           </button>
         );
       })}
