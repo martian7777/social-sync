@@ -39,7 +39,9 @@ export default async function HomePage() {
               <UserButton />
             </>
           ) : (
-            <SignInButton mode="modal"><button className={styles.navButton}>Sign In</button></SignInButton>
+            <div className={styles.navButton}>
+              <SignInButton mode="modal" fallbackRedirectUrl="/" />
+            </div>
           )}
         </div>
       </nav>
