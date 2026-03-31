@@ -2,48 +2,83 @@ import { NextRequest } from 'next/server';
 import { PlatformId } from '@/lib/types';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 
-// Simulate realistic API delay
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Mock platform-specific API calls
+// Real Twitter/X API v2 — POST https://api.x.com/2/tweets
 async function callTwitterAPI(content: string, hasMedia: boolean, accessToken: string): Promise<{ postId: string }> {
-  await sleep(1200);
   if (!accessToken) throw new Error('Twitter access token is missing');
-  // Simulate a random failure ~15% of the time
-  if (Math.random() < 0.15) throw new Error('Twitter API rate limit exceeded. Try again in a few minutes.');
-  return { postId: `tw_${Date.now()}` };
+
+  const response = await fetch('https://api.x.com/2/tweets', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text: content }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const detail = errorData?.detail || errorData?.title || `HTTP ${response.status}`;
+    throw new Error(`Twitter API error: ${detail}`);
+  }
+
+  const data = await response.json();
+  return { postId: data.data?.id || `tw_${Date.now()}` };
 }
 
+// Facebook — requires Page Access Token and Page ID (not user token)
 async function callFacebookAPI(content: string, accessToken: string): Promise<{ postId: string }> {
-  await sleep(900);
   if (!accessToken) throw new Error('Facebook access token is missing');
-  // REAL API: POST https://graph.facebook.com/{page-id}/feed
-  return { postId: `fb_${Date.now()}` };
+  // To actually post, you need a Page Access Token and Page ID
+  // POST https://graph.facebook.com/{page-id}/feed?message={content}&access_token={token}
+  throw new Error('Facebook posting requires a Page Access Token. Configure it in your Clerk Dashboard with pages_manage_posts scope.');
 }
 
+// Instagram — requires Business Account + media container flow
 async function callInstagramAPI(content: string, hasMedia: boolean, accessToken: string): Promise<{ postId: string }> {
-  await sleep(1500);
   if (!hasMedia) throw new Error('Instagram requires at least one image or video');
   if (!accessToken) throw new Error('Instagram access token is missing');
-  // REAL API: 2-step — POST container then publish
-  return { postId: `ig_${Date.now()}` };
+  // Instagram API requires a 2-step process: create media container, then publish
+  throw new Error('Instagram posting requires a Business/Creator account and the Content Publishing API. This needs additional setup.');
 }
 
+// TikTok — requires video upload flow
 async function callTikTokAPI(content: string, accessToken: string): Promise<{ postId: string }> {
-  await sleep(2000);
   if (!accessToken) throw new Error('TikTok access token is missing');
-  // REAL API: POST https://open.tiktokapis.com/v2/post/publish/video/init/
-  return { postId: `tt_${Date.now()}` };
+  // TikTok only supports video posts via their Content Posting API
+  throw new Error('TikTok posting requires video content and the Content Posting API. This needs additional setup.');
 }
 
+// Reddit — POST https://oauth.reddit.com/api/submit
 async function callRedditAPI(content: string, subreddit: string, accessToken: string): Promise<{ postId: string }> {
-  await sleep(800);
   if (!subreddit) throw new Error('A subreddit name is required for Reddit posts');
   if (!accessToken) throw new Error('Reddit access token is missing');
-  // REAL API: POST https://oauth.reddit.com/api/submit
-  return { postId: `rd_${Date.now()}` };
+
+  const formData = new URLSearchParams();
+  formData.append('sr', subreddit);
+  formData.append('kind', 'self');
+  formData.append('title', content.substring(0, 300));
+  formData.append('text', content);
+
+  const response = await fetch('https://oauth.reddit.com/api/submit', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'SocialSync/1.0',
+    },
+    body: formData.toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Reddit API error: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.json?.errors?.length) {
+    throw new Error(`Reddit error: ${data.json.errors[0][1]}`);
+  }
+
+  return { postId: data.json?.data?.id || `rd_${Date.now()}` };
 }
 
 export async function POST(
